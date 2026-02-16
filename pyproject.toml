@@ -49,6 +49,12 @@ rocm = [
     "torch==2.8.0+rocm6.4",
     "pytorch-triton-rocm>=3.2.0",
 ]
+xpu = [
+    "torch==2.8.0+xpu",
+    "pytorch-triton-xpu>=3.2.0",
+    "openvino==2025.4.0",
+]
+
 test = [
     "pytest==8.3.5",
     "pytest-cov==6.0.0",
@@ -64,6 +70,7 @@ conflicts = [
         { extra = "cpu" },
         { extra = "gpu" },
         { extra = "rocm" },
+        { extra = "xpu" }
     ],
 ]
 override-dependencies = [
@@ -75,9 +82,14 @@ torch = [
     { index = "pytorch-cpu", extra = "cpu" },
     { index = "pytorch-cuda", extra = "gpu" },
     { index = "pytorch-rocm", extra = "rocm" },
+    { index = "pytorch-xpu", extra = "xpu" },
 ]
 pytorch-triton-rocm = [
     { index = "pytorch-rocm", extra = "rocm" },
+]
+
+pytorch-triton-xpu = [
+    { index = "pytorch-xpu", extra = "xpu" },
 ]
 
 [[tool.uv.index]]
@@ -93,6 +105,11 @@ explicit = true
 [[tool.uv.index]]
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm6.4"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-xpu"
+url = "https://download.pytorch.org/whl/xpu"
 explicit = true
 
 [build-system]
