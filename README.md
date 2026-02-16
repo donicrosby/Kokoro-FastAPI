@@ -14,7 +14,7 @@
 
 Dockerized FastAPI wrapper for [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) text-to-speech model
 - Multi-language support (English, Japanese, Chinese, _Vietnamese soon_)
-- OpenAI-compatible Speech endpoint, NVIDIA GPU accelerated or CPU inference with PyTorch 
+- OpenAI-compatible Speech endpoint, NVIDIA GPU, Intel (OpenVINO/XPU), AMD ROCm, or CPU inference with PyTorch
 - ONNX support coming soon, see v0.1.5 and earlier for legacy ONNX support in the interim
 - Debug endpoints for monitoring system stats, integrated web UI on localhost:8880/web
 - Phoneme-based audio generation, phoneme generation
@@ -39,7 +39,8 @@ Refer to the core/config.py file for a full list of variables which can be manag
  Feedback/testing is always welcome
 
 docker run -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest # CPU, or:
-docker run --gpus all -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-gpu:latest  #NVIDIA GPU
+docker run --gpus all -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-gpu:latest  # NVIDIA GPU, or:
+docker run -p 8880:8880 --device /dev/dri ghcr.io/remsky/kokoro-fastapi-openvino:latest  # Intel (OpenVINO/XPU)
 ```
 
 
@@ -56,8 +57,9 @@ docker run --gpus all -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-gpu:latest  #NV
         git clone https://github.com/remsky/Kokoro-FastAPI.git
         cd Kokoro-FastAPI
 
-        cd docker/gpu  # For GPU support
-        # or cd docker/cpu  # For CPU support
+        cd docker/gpu  # For NVIDIA GPU
+        # or cd docker/cpu  # For CPU
+        # or cd docker/openvino  # For Intel (OpenVINO/XPU)
         docker compose up --build
 
         # *Note for Apple Silicon (M1/M2) users:

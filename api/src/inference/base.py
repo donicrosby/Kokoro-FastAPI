@@ -125,3 +125,6 @@ class BaseModelBackend(ModelBackend):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.synchronize()
+            if getattr(torch, "xpu", None) and torch.xpu.is_available():
+                torch.xpu.empty_cache()
+                torch.xpu.synchronize()

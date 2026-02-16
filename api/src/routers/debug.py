@@ -112,7 +112,7 @@ async def get_system_info():
         "network_io": psutil.net_io_counters()._asdict(),
     }
 
-    # GPU Info if available
+    # GPU/accelerator info if available
     gpu_info = None
     if torch.backends.mps.is_available():
         gpu_info = {
@@ -120,6 +120,13 @@ async def get_system_info():
             "available": True,
             "device": "Apple Silicon",
             "backend": "Metal",
+        }
+    elif getattr(torch, "xpu", None) and torch.xpu.is_available():
+        gpu_info = {
+            "type": "XPU",
+            "available": True,
+            "device": "Intel",
+            "backend": "OpenVINO/oneAPI",
         }
     elif GPU_AVAILABLE:
         try:

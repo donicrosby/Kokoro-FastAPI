@@ -2,7 +2,7 @@ services:
   kokoro-tts:
       build:
         context: ../..
-        dockerfile: docker/rocm/Dockerfile
+        dockerfile: docker/openvino/Dockerfile
       devices:
         - /dev/dri
         - /dev/kfd
@@ -14,24 +14,11 @@ services:
         - 996
       restart: 'always'
       volumes:
-        - ./kokoro-tts/config:/root/.config/miopen
-        - ./kokoro-tts/cache:/root/.cache/miopen
+        - ./kokoro-tts/config:/root/.config/openvino
+        - ./kokoro-tts/cache:/root/.cache/openvino
       ports:
         - 8880:8880
       environment:
         - USE_GPU=true
-        - TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1
-        # IMPORTANT: This is only required for RDNA 2 GPUs. You do not need the following steps if you use GPUS that are RDNA 1 (gfx1030) or older.
-        # ROCm's MIOpen libray will be slow if it has to figure out the optimal kernel shapes for each model
-        # See documentation on performancing tuning: https://github.com/ROCm/MIOpen/blob/develop/docs/conceptual/tuningdb.rst
-        # The volumes above cache the MIOpen shape files and user database for subsequent runs
-        #
-        # Steps:
-        # 1. Run Kokoro once with the following environment variables set:
-        #      - MIOPEN_FIND_MODE=3
-        #      - MIOPEN_FIND_ENFORCE=3
-        # 2. Generate various recordings using sample data (e.g. first couple paragraphs of Dracula); this will be slow
-        # 3. Comment out/remove the previously set environment variables
-        # 4. Add the following environment variables to enable caching of model shapes:
-        #       - MIOPEN_FIND_MODE=2
-        # 5. Restart the container and run Kokoro again, it should be much faster
+        - DEVICE=xpu
+        # OpenVINO/Intel XPU: volumes above cache config and model cache for faster restarts

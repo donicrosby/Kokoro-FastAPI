@@ -66,6 +66,12 @@ target "_rocm_base" {
     dockerfile = "docker/rocm/Dockerfile"
 }
 
+# Base settings for Intel OpenVINO/XPU builds
+target "_openvino_base" {
+    inherits = ["_common"]
+    dockerfile = "docker/openvino/Dockerfile"
+}
+
 
 # Individual platform targets for debugging/testing
 target "cpu-amd64" {
@@ -114,6 +120,16 @@ target "rocm-amd64" {
     ]
 }
 
+# Intel OpenVINO/XPU (amd64)
+target "openvino-amd64" {
+    inherits = ["_openvino_base"]
+    platforms = ["linux/amd64"]
+    tags = [
+        "${REGISTRY}/${OWNER}/${REPO}-openvino:${VERSION}-amd64",
+        "${REGISTRY}/${OWNER}/${REPO}-openvino:latest-amd64"
+    ]
+}
+
 # Development targets for faster local builds
 target "cpu-dev" {
     inherits = ["_cpu_base"]
@@ -144,10 +160,14 @@ group "rocm-all" {
     targets = ["rocm-amd64"]
 }
 
+group "openvino-all" {
+    targets = ["openvino-amd64"]
+}
+
 group "all" {
-    targets = ["cpu", "gpu", "rocm"]
+    targets = ["cpu", "gpu", "rocm-amd64", "openvino-amd64"]
 }
 
 group "individual-platforms" {
-    targets = ["cpu-amd64", "cpu-arm64", "gpu-amd64", "gpu-arm64", "rocm-amd64"]
+    targets = ["cpu-amd64", "cpu-arm64", "gpu-amd64", "gpu-arm64", "rocm-amd64", "openvino-amd64"]
 }

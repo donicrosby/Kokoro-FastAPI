@@ -94,6 +94,9 @@ async def lifespan(app: FastAPI):
         startup_msg += "\nUsing Apple Metal Performance Shaders (MPS)"
     elif device == "cuda":
         startup_msg += f"\nCUDA: {torch.cuda.is_available()}"
+    elif device == "xpu":
+        xpu_avail = getattr(torch, "xpu", None) and torch.xpu.is_available()
+        startup_msg += f"\nIntel XPU: {xpu_avail}"
     else:
         startup_msg += "\nRunning on CPU"
     startup_msg += f"\n{voicepack_count} voice packs loaded"

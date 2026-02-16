@@ -47,7 +47,7 @@ ENV PHONEMIZER_ESPEAK_PATH=/usr/bin \
 # Install dependencies with GPU extras (using cache mounts)
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --python 3.12 && \
-    uv sync --extra openvino
+    uv sync --extra xpu
 
 # Copy project files including models
 COPY --chown=appuser:appuser api ./api
@@ -63,7 +63,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
     USE_GPU=true \
     DOWNLOAD_MODEL=true \
-    DEVICE="gpu"
+    DEVICE="xpu"
 
 # Run FastAPI server through entrypoint.sh
 CMD ["./entrypoint.sh"]

@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
     use_gpu: bool = True  # Whether to use GPU acceleration if available
     device_type: str | None = (
-        None  # Will be auto-detected if None, can be "cuda", "mps", or "cpu"
+        None  # Will be auto-detected if None, can be "cuda", "mps", "xpu", or "cpu"
     )
     allow_local_voice_saving: bool = (
         False  # Whether to allow saving combined voices locally
@@ -80,6 +80,8 @@ class Settings(BaseSettings):
             return "mps"
         elif torch.cuda.is_available():
             return "cuda"
+        if getattr(torch, "xpu", None) and torch.xpu.is_available():
+            return "xpu"
         return "cpu"
 
 
