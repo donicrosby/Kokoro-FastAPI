@@ -10,7 +10,6 @@ USER root
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
     espeak-ng \
     espeak-ng-data \
-    rocrand \
     git \
     libsndfile1 \
     curl \
