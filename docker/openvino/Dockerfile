@@ -1,4 +1,4 @@
-FROM openvino/ubuntu24_dev:latest
+FROM openvino/ubuntu24_runtime:latest
 ENV DEBIAN_FRONTEND=noninteractive \
     PHONEMIZER_ESPEAK_PATH=/usr/bin \
     PHONEMIZER_ESPEAK_DATA=/usr/share/espeak-ng-data \
