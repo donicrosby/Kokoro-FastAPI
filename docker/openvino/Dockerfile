@@ -4,6 +4,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PHONEMIZER_ESPEAK_DATA=/usr/share/espeak-ng-data \
     ESPEAK_DATA_PATH=/usr/share/espeak-ng-data
 
+USER root
+
 # Install Python and other dependencies
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
     espeak-ng \
