@@ -19,6 +19,7 @@ RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommen
     nano \
     g++ \
     zstd \
+    python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /usr/share/espeak-ng-data \
