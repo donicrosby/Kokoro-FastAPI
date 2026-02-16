@@ -29,7 +29,7 @@ RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommen
     && mv /root/.local/bin/uvx /usr/local/bin/ \
 
     # Create non-root user and set up directories and permissions
-    && useradd -m -u 1001 appuser \
+    && useradd -m -u 1002 appuser \
     && mkdir -p /app/api/src/models/v1_0 \
     && chown -R appuser:appuser /app \
     # Models folder
