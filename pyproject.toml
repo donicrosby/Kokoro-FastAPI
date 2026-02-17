@@ -53,6 +53,7 @@ xpu = [
     "torch==2.8.0+xpu",
     "pytorch-triton-xpu>=3.2.0",
     "openvino==2025.4.0",
+    "kokoro @ git+https://github.com/hexgrad/kokoro.git#xpu-support",
 ]
 
 test = [

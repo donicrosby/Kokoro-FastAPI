@@ -80,7 +80,7 @@ class Settings(BaseSettings):
             return "mps"
         elif torch.cuda.is_available():
             return "cuda"
-        if getattr(torch, "xpu", None) and torch.xpu.is_available():
+        if torch.xpu.is_available():
             return "xpu"
         return "cpu"
 
