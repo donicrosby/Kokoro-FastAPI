@@ -53,7 +53,8 @@ rocm = [
 ]
 openvino = [
     "onnxruntime-openvino",
-    "openvino==2025.4.1",
+    "openvino>=2025.4.1",
+    "onnxruntime==1.24.1",
     "pytorch-triton-xpu",
     "torch",
 ]

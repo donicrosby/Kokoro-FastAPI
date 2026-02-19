@@ -233,7 +233,7 @@ class KokoroV1(BaseModelBackend):
         else:
             kwargs["voices_filename"] = (settings.hf_voices_filename or "").strip()
 
-        logger.info("Loading Kokoro ONNX model from Hugging Face Hub: %s", repo_id)
+        logger.info(f"Loading Kokoro ONNX model from Hugging Face Hub: {repo_id}")
 
         loop = asyncio.get_event_loop()
         self._model = await loop.run_in_executor(
