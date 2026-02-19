@@ -651,7 +651,7 @@ This API uses the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model 
 
 - **Word timestamps:** Not supported with the ONNX backend; `return_timestamps` is ignored.
 - **Voices:** Built-in voices come from the ONNX voices bundle. Custom voices: use `.npy` (recommended, no PyTorch) or `.pt` (requires optional `torch`; install with `pip install kokoro-fastapi[cpu]` or `[gpu]`).
-- **Hugging Face community models:** Set `HF_MODEL_REPO` (e.g. `onnx-community/Kokoro-82M-v1.0-ONNX`) and exactly one of `HF_VOICES_SUBDIR` (e.g. `voices`) or `HF_VOICES_FILENAME`. The app will load via `Kokoro.from_pretrained()` at startup. For OpenVINO GPU with HF models, set `ONNX_PROVIDER_CONFIG` to `{"providers": ["OpenVINOExecutionProvider"], "provider_options": [{"device_type": "GPU"}]}` (see `docker/openvino/docker-compose.yml`).
+- **Hugging Face community models:** Set `HF_MODEL_REPO` (e.g. `onnx-community/Kokoro-82M-v1.0-ONNX`) and exactly one of `HF_VOICES_SUBDIR` (e.g. `voices`) or `HF_VOICES_FILENAME`. The app will load via `Kokoro.from_pretrained()` at startup. The **OpenVINO Dockerfile** bakes in this model at build time (see `docker/openvino/Dockerfile`). For OpenVINO GPU with HF models, set `ONNX_PROVIDER_CONFIG` to `{"providers": ["OpenVINOExecutionProvider"], "provider_options": [{"device_type": "GPU"}]}` (see `docker/openvino/docker-compose.yml`).
 
 Visit the model page for more details about training and capabilities.
 </details>
