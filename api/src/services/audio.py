@@ -76,22 +76,22 @@ class AudioNormalizer:
         amplitude_threshold = np.iinfo(audio_data.dtype).max * (
             10 ** (silence_threshold_db / 20)
         )
-        # Find the first samples above the silence threshold at the start and end of the audio
-        non_silent_index_start, non_silent_index_end = None, None
 
-        for X in range(0, len(audio_data)):
-            if abs(audio_data[X]) > amplitude_threshold:
-                non_silent_index_start = X
-                break
+        # Build a 1D amplitude envelope over time.
+        # If audio has extra dimensions (e.g., channels), take max amplitude per frame.
+        abs_audio = np.abs(audio_data.astype(np.int32))
+        if abs_audio.ndim == 1:
+            frame_amplitude = abs_audio
+        else:
+            frame_amplitude = np.max(abs_audio, axis=tuple(range(1, abs_audio.ndim)))
 
-        for X in range(len(audio_data) - 1, -1, -1):
-            if abs(audio_data[X]) > amplitude_threshold:
-                non_silent_index_end = X
-                break
-
-        # Handle the case where the entire audio is silent
-        if non_silent_index_start == None or non_silent_index_end == None:
+        non_silent_mask = frame_amplitude > amplitude_threshold
+        if not np.any(non_silent_mask):
             return 0, len(audio_data)
+
+        non_silent_indices = np.flatnonzero(non_silent_mask)
+        non_silent_index_start = int(non_silent_indices[0])
+        non_silent_index_end = int(non_silent_indices[-1])
 
         return max(non_silent_index_start - self.samples_to_pad_start, 0), min(
             non_silent_index_end + math.ceil(samples_to_pad_end / speed),
@@ -147,10 +147,13 @@ class AudioService:
         if isinstance(payload, np.ndarray):
             return payload.size > 0
 
-        if hasattr(payload, "__len__"):
+        if isinstance(payload, (bytes, bytearray, memoryview)):
             return len(payload) > 0
 
-        return True
+        try:
+            return len(payload) > 0
+        except TypeError:
+            return False
 
     @staticmethod
     async def convert_audio(
@@ -213,7 +216,7 @@ class AudioService:
             return audio_chunk
 
         except Exception as e:
-            logger.error(f"Error converting audio stream to {output_format}: {str(e)}")
+            logger.exception(f"Error converting audio stream to {output_format}: {str(e)}")
             raise ValueError(
                 f"Failed to convert audio stream to {output_format}: {str(e)}"
             )
