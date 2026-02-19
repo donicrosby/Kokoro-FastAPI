@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+import onnxruntime as ort
 from loguru import logger
 
 from ..core import paths
@@ -61,24 +62,29 @@ class ModelManager:
             # Initialize backend
             await self.initialize()
 
-            # Load model
-            model_path = self._config.pytorch_kokoro_v1_file
-            await self.load_model(model_path)
+            # Load ONNX model (path ignored; backend uses config)
+            await self.load_model("")
 
-            # Use paths module to get voice path
+            # Merge built-in voices with custom (from paths) for count
+            builtin = set(self._backend.get_voices()) if self._backend else set()
+            custom = set(await paths.list_voices())
+            voices = sorted(builtin | custom)
+
+            # Warm up: use built-in name or path to file
+            voice_name = settings.default_voice
             try:
-                voices = await paths.list_voices()
-                voice_path = await paths.get_voice_path(settings.default_voice)
+                if self._backend and voice_name in self._backend.get_voices():
+                    voice_arg = (voice_name, voice_name)
+                else:
+                    voice_path = await paths.get_voice_path(voice_name)
+                    voice_arg = (voice_name, voice_path)
+            except FileNotFoundError as e:
+                raise RuntimeError(f"Default voice '{voice_name}' not found: {e}") from e
 
-                # Warm up with short text
-                warmup_text = "Warmup text for initialization."
-                # Use default voice name for warmup
-                voice_name = settings.default_voice
-                logger.debug(f"Using default voice '{voice_name}' for warmup")
-                async for _ in self.generate(warmup_text, (voice_name, voice_path)):
-                    pass
-            except Exception as e:
-                raise RuntimeError(f"Failed to get default voice: {e}")
+            warmup_text = "Warmup text for initialization."
+            logger.debug(f"Using default voice '{voice_name}' for warmup")
+            async for _ in self.generate(warmup_text, voice_arg):
+                pass
 
             ms = int((time.perf_counter() - start) * 1000)
             logger.info(f"Warmup completed in {ms}ms")
@@ -86,13 +92,11 @@ class ModelManager:
             return self._device, "kokoro_v1", len(voices)
         except FileNotFoundError as e:
             logger.error("""
-Model files not found! You need to download the Kokoro V1 model:
+ONNX model files not found. Download them:
 
-1. Download model using the script:
-   python docker/scripts/download_model.py --output api/src/models/v1_0
+  python docker/scripts/download_model.py --output api/src/models/v1_0
 
-2. Or set environment variable in docker-compose:
-   DOWNLOAD_MODEL=true
+Or set DOWNLOAD_MODEL=true in docker-compose.
 """)
             exit(0)
         except Exception as e:
@@ -125,6 +129,12 @@ Model files not found! You need to download the Kokoro V1 model:
 
         try:
             await self._backend.load_model(path)
+            logger.info(
+                f"ONNX providers available on system: {ort.get_available_providers()}"
+            )
+            provider = self._backend.get_onnx_provider()
+            if provider:
+                logger.info(f"ONNX provider in use: {provider}")
         except FileNotFoundError as e:
             raise e
         except Exception as e:

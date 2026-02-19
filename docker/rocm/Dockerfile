@@ -1,4 +1,4 @@
-FROM rocm/dev-ubuntu-24.04:6.4.4-complete
+FROM rocm/onnxruntime:rocm7.2_ub24.04_ort1.23_torch2.9.1
 ENV DEBIAN_FRONTEND=noninteractive \
     PHONEMIZER_ESPEAK_PATH=/usr/bin \
     PHONEMIZER_ESPEAK_DATA=/usr/share/espeak-ng-data \
@@ -8,7 +8,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt upgrade -y && apt-get install -y --no-install-recommends \
     espeak-ng \
     espeak-ng-data \
-    rocrand \
     git \
     libsndfile1 \
     curl \
@@ -48,19 +47,6 @@ ENV PHONEMIZER_ESPEAK_PATH=/usr/bin \
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv --python 3.12 && \
     uv sync --extra rocm
-
-# Run kdb files (shape files for MIOpen)
-ENV ROCM_VERSION=6.4.4
-COPY --chown=appuser:appuser docker/rocm/kdb_install.sh /tmp/
-RUN /tmp/kdb_install.sh
-
-# Support older GFX Arch
-ENV ROCBLAS_VERSION=6.4.4-1
-RUN cd /tmp && wget https://archive.archlinux.org/packages/r/rocblas/rocblas-${ROCBLAS_VERSION}-x86_64.pkg.tar.zst -O rocblas.tar.zst \
-    && pwd && ls -lah ./ \
-    && tar --zstd -xvf rocblas.tar.zst && rm rocblas.tar.zst \
-    && rm -rf /app/.venv/lib/python3.12/site-packages/torch/lib/rocblas/library/ \
-    && mv ./opt/rocm/lib/rocblas/library/ /app/.venv/lib/python3.12/site-packages/torch/lib/rocblas/
 
 # Copy project files including models
 COPY --chown=appuser:appuser api ./api

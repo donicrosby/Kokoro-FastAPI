@@ -8,8 +8,6 @@ import time
 from typing import AsyncGenerator, List, Optional, Tuple, Union
 
 import numpy as np
-import torch
-from kokoro import KPipeline
 from loguru import logger
 
 from ..core.config import settings
@@ -20,7 +18,6 @@ from ..inference.voice_manager import get_manager as get_voice_manager
 from ..structures.schemas import NormalizationOptions
 from .audio import AudioNormalizer, AudioService
 from .streaming_audio_writer import StreamingAudioWriter
-from .text_processing import tokenize
 from .text_processing.text_processor import process_text_chunk, smart_split
 
 
@@ -168,13 +165,24 @@ class TTSService:
             except Exception as e:
                 logger.error(f"Failed to process tokens: {str(e)}")
 
-    async def _load_voice_from_path(self, path: str, weight: float):
-        # Check if the path is None and raise a ValueError if it is not
+    async def _load_voice_from_path(self, path: str, weight: float) -> np.ndarray:
+        """Load voice array from .npy or .pt; return numpy array (weight applied)."""
         if not path:
             raise ValueError(f"Voice not found at path: {path}")
 
-        logger.debug(f"Loading voice tensor from path: {path}")
-        return torch.load(path, map_location="cpu") * weight
+        logger.debug(f"Loading voice from path: {path}")
+        if path.lower().endswith(".npy"):
+            arr = np.load(path, allow_pickle=False).astype(np.float32) * weight
+            return arr
+        try:
+            import torch
+            t = torch.load(path, map_location="cpu", weights_only=True)
+            arr = t.numpy() if hasattr(t, "numpy") else np.array(t, dtype=np.float32)
+            return arr * weight
+        except ImportError:
+            raise RuntimeError(
+                "Loading .pt voice files requires torch. Install with: pip install kokoro-fastapi[cpu] (or [gpu])"
+            )
 
     async def _get_voices_path(self, voice: str) -> Tuple[str, str]:
         """Get voice path, handling combined voices.
@@ -192,12 +200,17 @@ class TTSService:
             # Split the voice on + and - and ensure that they get added to the list eg: hi+bob = ["hi","+","bob"]
             split_voice = re.split(r"([-+])", voice)
 
-            # If it is only once voice there is no point in loading it up, doing nothing with it, then saving it
             if len(split_voice) == 1:
-                # Since its a single voice the only time that the weight would matter is if voice_weight_normalization is off
                 if (
                     "(" not in voice and ")" not in voice
-                ) or settings.voice_weight_normalization == True:
+                ) or settings.voice_weight_normalization is True:
+                    backend = self.model_manager.get_backend()
+                    if (
+                        isinstance(backend, KokoroV1)
+                        and voice in backend.get_voices()
+                    ):
+                        logger.debug(f"Using built-in voice: {voice}")
+                        return voice, voice
                     path = await self._voice_manager.get_voice_path(voice)
                     if not path:
                         raise RuntimeError(f"Voice not found: {voice}")
@@ -245,11 +258,12 @@ class TTSService:
                 else:
                     combined_tensor -= voice_tensor
 
-            # Save the new combined voice so it can be loaded latter
+            # Save combined voice as .npy (ONNX-friendly; backend loads with numpy)
             temp_dir = tempfile.gettempdir()
-            combined_path = os.path.join(temp_dir, f"{voice}.pt")
+            safe_name = re.sub(r"[\s()+]", "_", voice).strip("_") or "combined"
+            combined_path = os.path.join(temp_dir, f"{safe_name}.npy")
             logger.debug(f"Saving combined voice to: {combined_path}")
-            torch.save(combined_tensor, combined_path)
+            np.save(combined_path, combined_tensor.astype(np.float32))
             return voice, combined_path
         except Exception as e:
             logger.error(f"Failed to get voice path: {e}")
@@ -432,18 +446,26 @@ class TTSService:
             logger.error(f"Error in audio generation: {str(e)}")
             raise
 
-    async def combine_voices(self, voices: List[str]) -> torch.Tensor:
+    async def combine_voices(self, voices: List[str]) -> np.ndarray:
         """Combine multiple voices.
 
         Returns:
-            Combined voice tensor
+            Combined voice array (float32).
         """
 
         return await self._voice_manager.combine_voices(voices)
 
     async def list_voices(self) -> List[str]:
-        """List available voices."""
-        return await self._voice_manager.list_voices()
+        """List available voices (built-in from ONNX bundle + custom .npy/.pt from paths)."""
+        custom = set(await self._voice_manager.list_voices())
+        try:
+            backend = self.model_manager.get_backend()
+            if isinstance(backend, KokoroV1):
+                builtin = set(backend.get_voices())
+                return sorted(custom | builtin)
+        except RuntimeError:
+            pass
+        return sorted(custom)
 
     async def generate_from_phonemes(
         self,
@@ -470,35 +492,29 @@ class TTSService:
             voice_name, voice_path = await self._get_voices_path(voice)
 
             if isinstance(backend, KokoroV1):
-                # For Kokoro V1, use generate_from_tokens with raw phonemes
-                result = None
-                # Use provided lang_code or determine from voice name
-                pipeline_lang_code = lang_code if lang_code else voice[:1].lower()
-                logger.info(
-                    f"Using lang_code '{pipeline_lang_code}' for voice '{voice_name}' in phoneme pipeline"
-                )
-
                 try:
-                    # Use backend's pipeline management
-                    for r in backend._get_pipeline(
-                        pipeline_lang_code
-                    ).generate_from_tokens(
-                        tokens=phonemes,  # Pass raw phonemes string
-                        voice=voice_path,
+                    chunks = []
+                    async for chunk_audio in backend.generate_from_tokens(
+                        phonemes,
+                        (voice_name, voice_path),
                         speed=speed,
+                        lang_code=lang_code,
                     ):
-                        if r.audio is not None:
-                            result = r
-                            break
+                        chunks.append(chunk_audio)
+                    audio = (
+                        np.concatenate(chunks, dtype=np.float32)
+                        if chunks
+                        else np.array([], dtype=np.float32)
+                    )
                 except Exception as e:
                     logger.error(f"Failed to generate from phonemes: {e}")
-                    raise RuntimeError(f"Phoneme generation failed: {e}")
+                    raise RuntimeError(f"Phoneme generation failed: {e}") from e
 
-                if result is None or result.audio is None:
+                if audio.size == 0:
                     raise ValueError("No audio generated")
 
                 processing_time = time.time() - start_time
-                return result.audio.numpy(), processing_time
+                return audio, processing_time
             else:
                 raise ValueError(
                     "Phoneme generation only supported with Kokoro V1 backend"

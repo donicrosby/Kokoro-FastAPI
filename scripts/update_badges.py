@@ -6,21 +6,21 @@ import tomli
 
 
 def extract_dependency_info():
-    """Extract version for kokoro and misaki from pyproject.toml"""
+    """Extract version for kokoro-onnx and misaki from pyproject.toml"""
     with open("pyproject.toml", "rb") as f:
         pyproject = tomli.load(f)
 
     deps = pyproject["project"]["dependencies"]
     info = {}
-    kokoro_found = False
+    kokoro_onnx_found = False
     misaki_found = False
 
     for dep in deps:
-        # Match kokoro==version
-        kokoro_match = re.match(r"^kokoro==(.+)$", dep)
+        # Match kokoro-onnx>=version or kokoro-onnx==version (badge key "kokoro" for README)
+        kokoro_match = re.match(r"^kokoro-onnx(?:>=|==)(.+)$", dep.strip())
         if kokoro_match:
-            info["kokoro"] = {"version": kokoro_match.group(1)}
-            kokoro_found = True
+            info["kokoro"] = {"version": kokoro_match.group(1).strip()}
+            kokoro_onnx_found = True
 
         # Match misaki[...] ==version or misaki==version
         misaki_match = re.match(r"^misaki(?:\[.*?\])?==(.+)$", dep)
@@ -28,12 +28,11 @@ def extract_dependency_info():
             info["misaki"] = {"version": misaki_match.group(1)}
             misaki_found = True
 
-        # Stop if both found
-        if kokoro_found and misaki_found:
+        if kokoro_onnx_found and misaki_found:
             break
 
-    if not kokoro_found:
-        raise ValueError("Kokoro version not found in pyproject.toml dependencies")
+    if not kokoro_onnx_found:
+        raise ValueError("kokoro-onnx version not found in pyproject.toml dependencies")
     if not misaki_found:
         raise ValueError("Misaki version not found in pyproject.toml dependencies")
 
@@ -128,7 +127,7 @@ def main():
         print(f"- Tests: {passed_tests} passed")
         print(f"- Coverage: {coverage_percentage}%")
         if "kokoro" in dep_info:
-            print(f"- Kokoro: {dep_info['kokoro']['version']}")
+            print(f"- kokoro-onnx: {dep_info['kokoro']['version']}")
         if "misaki" in dep_info:
             print(f"- Misaki: {dep_info['misaki']['version']}")
     else:

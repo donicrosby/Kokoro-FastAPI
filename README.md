@@ -7,19 +7,19 @@
 [![Coverage](https://img.shields.io/badge/coverage-54%25-tan)]()
 [![Try on Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Try%20on-Spaces-blue)](https://huggingface.co/spaces/Remsky/Kokoro-TTS-Zero)
 
-[![Kokoro](https://img.shields.io/badge/kokoro-0.9.2-BB5420)](https://github.com/hexgrad/kokoro)
+[![Kokoro](https://img.shields.io/badge/kokoro-0.9.2-BB5420)](https://github.com/thewh1teagle/kokoro-onnx)
 [![Misaki](https://img.shields.io/badge/misaki-0.9.3-B8860B)](https://github.com/hexgrad/misaki)
 
 [![Tested at Model Commit](https://img.shields.io/badge/last--tested--model--commit-1.0::9901c2b-blue)](https://huggingface.co/hexgrad/Kokoro-82M/commit/9901c2b79161b6e898b7ea857ae5298f47b8b0d6)
 
 Dockerized FastAPI wrapper for [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) text-to-speech model
 - Multi-language support (English, Japanese, Chinese, _Vietnamese soon_)
-- OpenAI-compatible Speech endpoint, NVIDIA GPU accelerated or CPU inference with PyTorch 
-- ONNX support coming soon, see v0.1.5 and earlier for legacy ONNX support in the interim
+- OpenAI-compatible Speech endpoint; inference via [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) (ONNX Runtime), with optional PyTorch for legacy `.pt` voice loading
 - Debug endpoints for monitoring system stats, integrated web UI on localhost:8880/web
-- Phoneme-based audio generation, phoneme generation
-- Per-word timestamped caption generation
+- Phoneme-based audio generation, phoneme generation (G2P via [Misaki](https://github.com/hexgrad/misaki))
 - Voice mixing with weighted combinations
+
+**Notes (ONNX backend):** `return_timestamps` has no effect—word timestamps are not provided. Custom voices: prefer `.npy` (numpy); `.pt` (legacy) is supported only when PyTorch is installed (e.g. `pip install kokoro-fastapi[cpu]` or `[gpu]`).
 
 ### Integration Guides
  [![Helm Chart](https://img.shields.io/badge/Helm%20Chart-black?style=flat&logo=helm&logoColor=white)](https://github.com/remsky/Kokoro-FastAPI/wiki/Setup-Kubernetes) [![DigitalOcean](https://img.shields.io/badge/DigitalOcean-black?style=flat&logo=digitalocean&logoColor=white)](https://github.com/remsky/Kokoro-FastAPI/wiki/Integrations-DigitalOcean) [![SillyTavern](https://img.shields.io/badge/SillyTavern-black?style=flat&color=red)](https://github.com/remsky/Kokoro-FastAPI/wiki/Integrations-SillyTavern)
@@ -647,9 +647,12 @@ Visit [NVIDIA Container Toolkit installation](https://docs.nvidia.com/datacenter
 <details open>
 <summary>Model</summary>
 
-This API uses the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model from HuggingFace. 
+This API uses the [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) model via [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) for ONNX inference.
 
-Visit the model page for more details about training, architecture, and capabilities. I have no affiliation with any of their work, and produced this wrapper for ease of use and personal projects.
+- **Word timestamps:** Not supported with the ONNX backend; `return_timestamps` is ignored.
+- **Voices:** Built-in voices come from the ONNX voices bundle. Custom voices: use `.npy` (recommended, no PyTorch) or `.pt` (requires optional `torch`; install with `pip install kokoro-fastapi[cpu]` or `[gpu]`).
+
+Visit the model page for more details about training and capabilities.
 </details>
 <details>
 <summary>License</summary>

@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --chown=appuser:appuser pyproject.toml ./pyproject.toml
 
 # Install dependencies with GPU extras
-RUN uv venv --python 3.10 && \
+RUN uv venv --python 3.12 && \
     uv sync --extra gpu --no-cache
 
 # Copy project files including models

@@ -2,7 +2,7 @@
 
 import re
 import time
-from typing import AsyncGenerator, Dict, List, Tuple, Optional
+from typing import AsyncGenerator, Dict, List, Optional, Tuple
 
 from loguru import logger
 
@@ -10,7 +10,25 @@ from ...core.config import settings
 from ...structures.schemas import NormalizationOptions
 from .normalizer import normalize_text
 from .phonemizer import phonemize
-from .vocabulary import tokenize
+
+# Lazy kokoro-onnx tokenizer for chunk sizing (same vocab as synthesis)
+_onnx_tokenizer = None
+
+
+def _get_onnx_tokenizer():
+    global _onnx_tokenizer
+    if _onnx_tokenizer is None:
+        from kokoro_onnx.tokenizer import Tokenizer
+        _onnx_tokenizer = Tokenizer()
+    return _onnx_tokenizer
+
+
+def tokenize(phonemes: str) -> List[int]:
+    """Convert phonemes string to token IDs using kokoro-onnx tokenizer."""
+    phonemes = phonemes.strip()
+    if not phonemes:
+        return []
+    return _get_onnx_tokenizer().tokenize(phonemes)
 
 # Pre-compiled regex patterns for performance
 # Updated regex to be more strict and avoid matching isolated brackets

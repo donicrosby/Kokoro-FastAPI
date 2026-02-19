@@ -36,5 +36,3 @@ tests/
 !requirements.txt
 
 # Docker
-Dockerfile*
-docker-compose*

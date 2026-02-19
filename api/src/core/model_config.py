@@ -28,18 +28,23 @@ class PyTorchConfig(BaseModel):
 
 
 class ModelConfig(BaseModel):
-    """Kokoro V1 model configuration."""
+    """Kokoro V1 model configuration (ONNX backend)."""
 
     # General settings
     cache_voices: bool = Field(True, description="Whether to cache voice tensors")
     voice_cache_size: int = Field(2, description="Maximum number of cached voices")
 
-    # Model filename
-    pytorch_kokoro_v1_file: str = Field(
-        "v1_0/kokoro-v1_0.pth", description="PyTorch Kokoro V1 model filename"
+    # ONNX model and voices (primary)
+    kokoro_onnx_file: str = Field(
+        "v1_0/kokoro-v1.0.onnx",
+        description="Kokoro ONNX model filename",
+    )
+    kokoro_onnx_voices_file: str = Field(
+        "v1_0/voices-v1.0.bin",
+        description="Kokoro ONNX voices bundle filename",
     )
 
-    # Backend config
+    # Backend config (legacy / optional)
     pytorch_gpu: PyTorchConfig = Field(default_factory=PyTorchConfig)
 
     class Config:

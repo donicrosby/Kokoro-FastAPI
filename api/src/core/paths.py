@@ -12,6 +12,7 @@ import torch
 from loguru import logger
 
 from .config import settings
+from .model_config import model_config
 
 
 async def _find_file(
@@ -103,6 +104,36 @@ async def get_model_path(model_name: str) -> str:
     return await _find_file(model_name, search_paths)
 
 
+async def get_onnx_model_path() -> str:
+    """Get path to ONNX model file.
+
+    Returns:
+        Absolute path to kokoro ONNX model file.
+
+    Raises:
+        FileNotFoundError: If model not found
+    """
+    api_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    model_dir = os.path.join(api_dir, settings.model_dir)
+    os.makedirs(model_dir, exist_ok=True)
+    return await _find_file(model_config.kokoro_onnx_file, [model_dir])
+
+
+async def get_onnx_voices_path() -> str:
+    """Get path to ONNX voices bundle file.
+
+    Returns:
+        Absolute path to voices .bin file.
+
+    Raises:
+        FileNotFoundError: If file not found
+    """
+    api_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    model_dir = os.path.join(api_dir, settings.model_dir)
+    os.makedirs(model_dir, exist_ok=True)
+    return await _find_file(model_config.kokoro_onnx_voices_file, [model_dir])
+
+
 async def get_voice_path(voice_name: str) -> str:
     """Get path to voice file.
 
@@ -124,13 +155,17 @@ async def get_voice_path(voice_name: str) -> str:
     # Ensure voice directory exists
     os.makedirs(voice_dir, exist_ok=True)
 
-    voice_file = f"{voice_name}.pt"
-
-    # Search in voice directory/o
     search_paths = [voice_dir]
     logger.debug(f"Searching for voice in path: {voice_dir}")
 
-    return await _find_file(voice_file, search_paths)
+    # Prefer .npy (ONNX-friendly), then .pt
+    for ext in (".npy", ".pt"):
+        voice_file = f"{voice_name}{ext}"
+        try:
+            return await _find_file(voice_file, search_paths)
+        except FileNotFoundError:
+            continue
+    raise FileNotFoundError(f"Voice not found: {voice_name} in paths: {search_paths}")
 
 
 async def list_voices() -> List[str]:
@@ -153,10 +188,17 @@ async def list_voices() -> List[str]:
     logger.debug(f"Scanning for voices in path: {voice_dir}")
 
     def filter_voice_files(name: str) -> bool:
-        return name.endswith(".pt")
+        return name.endswith(".pt") or name.endswith(".npy")
 
     voices = await _scan_directories(search_paths, filter_voice_files)
-    return sorted([name[:-3] for name in voices])  # Remove .pt extension
+    # Remove extension (.pt or .npy), deduplicate, sort
+    names = set()
+    for name in voices:
+        if name.endswith(".pt"):
+            names.add(name[:-3])
+        elif name.endswith(".npy"):
+            names.add(name[:-4])
+    return sorted(names)
 
 
 async def load_voice_tensor(

@@ -3,7 +3,7 @@ name = "kokoro-fastapi"
 version = "0.3.0"
 description = "FastAPI TTS Service"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     # Core dependencies
     "fastapi==0.115.6",
@@ -32,9 +32,9 @@ dependencies = [
     "mutagen>=1.47.0",
     "psutil>=6.1.1",
     "espeakng-loader==0.2.4",
-    "kokoro==0.9.4",
+    "kokoro-onnx>=0.5.0",
     "misaki[en,ja,ko,zh]==0.9.4",
-    "spacy==3.8.5",
+    "spacy>=3.8.5",
     "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "inflect>=7.5.0",
     "phonemizer-fork>=3.3.2",
@@ -43,11 +43,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["torch==2.8.0+cu129"]
-cpu = ["torch==2.8.0"]
+gpu = ["onnxruntime-gpu[cuda,cudnn]",  "torch"]
+cpu = ["onnxruntime", "torch"]
 rocm = [
-    "torch==2.8.0+rocm6.4",
-    "pytorch-triton-rocm>=3.2.0",
+    "onnxruntime-migraphx",
+    "pytorch-triton-rocm",
+    "torch"
+]
+openvino = [
+    "onnxruntime-openvino",
+    "openvino==2025.3.0",
+    "pytorch-triton-xpu",
+    "torch",
 ]
 test = [
     "pytest==8.3.5",
@@ -64,10 +71,8 @@ conflicts = [
         { extra = "cpu" },
         { extra = "gpu" },
         { extra = "rocm" },
+        { extra = "openvino" },
     ],
-]
-override-dependencies = [
-    "triton>=3.5.1 ; platform_machine == 'aarch64'"
 ]
 
 [tool.uv.sources]
@@ -75,9 +80,14 @@ torch = [
     { index = "pytorch-cpu", extra = "cpu" },
     { index = "pytorch-cuda", extra = "gpu" },
     { index = "pytorch-rocm", extra = "rocm" },
+    { index = "pytorch-openvino", extra = "openvino" },
 ]
 pytorch-triton-rocm = [
     { index = "pytorch-rocm", extra = "rocm" },
+]
+
+pytorch-triton-xpu = [
+    { index = "pytorch-openvino", extra = "openvino" },
 ]
 
 [[tool.uv.index]]
@@ -93,6 +103,11 @@ explicit = true
 [[tool.uv.index]]
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm6.4"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-openvino"
+url = "https://download.pytorch.org/whl/xpu"
 explicit = true
 
 [build-system]

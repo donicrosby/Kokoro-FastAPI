@@ -6,10 +6,8 @@ from pathlib import Path
 from typing import AsyncGenerator, List, Tuple, Union
 
 import numpy as np
-import torch
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from kokoro import KPipeline
 from loguru import logger
 
 from ..core.config import settings
@@ -17,6 +15,7 @@ from ..inference.base import AudioChunk
 from ..services.audio import AudioNormalizer, AudioService
 from ..services.streaming_audio_writer import StreamingAudioWriter
 from ..services.temp_manager import TempFileWriter
+from ..services.text_processing import phonemize as phonemize_text_fn
 from ..services.text_processing import smart_split
 from ..services.tts_service import TTSService
 from ..structures import CaptionedSpeechRequest, CaptionedSpeechResponse, WordTimestamp
@@ -40,29 +39,20 @@ async def get_tts_service() -> TTSService:
 
 @router.post("/dev/phonemize", response_model=PhonemeResponse)
 async def phonemize_text(request: PhonemeRequest) -> PhonemeResponse:
-    """Convert text to phonemes using Kokoro's quiet mode.
+    """Convert text to phonemes using Misaki G2P.
 
     Args:
         request: Request containing text and language
 
     Returns:
-        Phonemes and token IDs
+        Phonemes and token IDs (tokens empty for now)
     """
     try:
         if not request.text:
             raise ValueError("Text cannot be empty")
 
-        # Initialize Kokoro pipeline in quiet mode (no model)
-        pipeline = KPipeline(lang_code=request.language, model=False)
-
-        # Get first result from pipeline (we only need one since we're not chunking)
-        for result in pipeline(request.text):
-            # result.graphemes = original text
-            # result.phonemes = phonemized text
-            # result.tokens = token objects (if available)
-            return PhonemeResponse(phonemes=result.phonemes, tokens=[])
-
-        raise ValueError("Failed to generate phonemes")
+        phonemes = phonemize_text_fn(request.text.strip(), language=request.language)
+        return PhonemeResponse(phonemes=phonemes, tokens=[])
     except ValueError as e:
         logger.error(f"Error in phoneme generation: {str(e)}")
         raise HTTPException(

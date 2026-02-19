@@ -2,13 +2,12 @@
 
 from .normalizer import normalize_text
 from .phonemizer import phonemize
-from .text_processor import process_text_chunk, smart_split
-from .vocabulary import tokenize
+from .text_processor import process_text_chunk, smart_split, tokenize
 
 
-def process_text(text: str) -> list[int]:
+def process_text(text: str, language: str = "a") -> list[int]:
     """Process text into token IDs (for backward compatibility)."""
-    return process_text_chunk(text)
+    return process_text_chunk(text, language)
 
 
 __all__ = [
