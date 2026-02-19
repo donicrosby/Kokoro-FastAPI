@@ -188,9 +188,7 @@ class KokoroV1(BaseModelBackend):
                 provider = provider.strip()
                 provider_options = _provider_options_from_env(provider)
                 logger.info(
-                    "Creating ONNX session from env: provider=%s, provider_options=%s",
-                    provider,
-                    provider_options or "(none)",
+                    f"Creating ONNX session from env: provider={provider}, provider_options={provider_options or '(none)'}",
                 )
                 session = ort.InferenceSession(
                     onnx_path,
