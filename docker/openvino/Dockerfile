@@ -1,4 +1,4 @@
-FROM openvino/ubuntu24_dev:2025.3.0
+FROM openvino/ubuntu24_dev:2025.4.1
 
 USER root
 # Install dependencies and check espeak location
