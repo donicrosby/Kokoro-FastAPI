@@ -17,6 +17,11 @@ services:
     ports:
       - "8880:8880"
     environment:
+      # Hugging Face model (default for OpenVINO image; model pre-downloaded at build)
+      - HF_MODEL_REPO=onnx-community/Kokoro-82M-v1.0-ONNX
+      - HF_MODEL_FILENAME=onnx/model.onnx
+      - HF_VOICES_SUBDIR=voices
+      - HF_HUB_CACHE=/app/.cache/huggingface/hub
       # ONNX Optimization Settings for vectorized operations
       - ONNX_PROVIDER=OpenVINOExecutionProvider
       # OpenVINO device: CPU (default for compatibility) or GPU / GPU.0 (used for path-based model load)

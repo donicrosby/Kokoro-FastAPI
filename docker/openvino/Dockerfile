@@ -54,11 +54,18 @@ ENV PYTHONUNBUFFERED=1 \
     DEVICE="openvino"
 
 ENV DOWNLOAD_MODEL=true
-# Download model if enabled
+# Download model if enabled (GitHub release)
 RUN if [ "$DOWNLOAD_MODEL" = "true" ]; then \
     python download_model.py --output api/src/models/v1_0; \
     fi
 
+# Pre-download Hugging Face community model at build time (onnx-community/Kokoro-82M-v1.0-ONNX)
+ENV HF_HUB_CACHE=/app/.cache/huggingface/hub \
+    HF_MODEL_REPO=onnx-community/Kokoro-82M-v1.0-ONNX \
+    HF_MODEL_FILENAME=onnx/model.onnx \
+    HF_VOICES_SUBDIR=voices
+RUN mkdir -p /app/.cache/huggingface/hub \
+    && python download_hf_model.py
 
 # Run FastAPI server through entrypoint.sh
 CMD ["./entrypoint.sh"]
