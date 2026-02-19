@@ -13,6 +13,16 @@ export class AudioService {
         this.CHARS_PER_CHUNK = 150; // Estimated chars per chunk
         this.serverDownloadPath = null; // Server-side download path
         this.pendingOperations = []; // Queue for buffer operations
+        this.audioObjectUrl = null;
+    }
+
+    supportsMpegMse() {
+        return (
+            typeof window !== 'undefined' &&
+            typeof window.MediaSource !== 'undefined' &&
+            typeof window.MediaSource.isTypeSupported === 'function' &&
+            window.MediaSource.isTypeSupported('audio/mpeg')
+        );
     }
 
     async streamAudio(text, voice, speed, onProgress) {
@@ -29,6 +39,7 @@ export class AudioService {
             onProgress?.(0, 1); // Reset progress to 0
             this.textLength = text.length;
             this.shouldAutoplay = document.getElementById('autoplay-toggle').checked;
+            const useStreamingPlayback = this.supportsMpegMse();
             
             // Calculate expected number of chunks based on text length
             const estimatedChunks = Math.max(1, Math.ceil(this.textLength / this.CHARS_PER_CHUNK));
@@ -44,7 +55,7 @@ export class AudioService {
                     voice: voice,
                     response_format: 'mp3', // Always use mp3 for streaming playback
                     download_format: document.getElementById('format-select').value || 'mp3', // Format for final download
-                    stream: true,
+                    stream: useStreamingPlayback,
                     speed: speed,
                     return_download_link: true,
                     lang_code: document.getElementById('lang-select').value || undefined
@@ -70,11 +81,35 @@ export class AudioService {
                 throw new Error(error.detail?.message || 'Failed to generate speech');
             }
 
-            await this.setupAudioStream(response.body, response, onProgress, estimatedChunks);
+            if (useStreamingPlayback) {
+                await this.setupAudioStream(response.body, response, onProgress, estimatedChunks);
+            } else {
+                await this.setupBlobPlayback(response, onProgress, estimatedChunks);
+            }
             return this.audio;
         } catch (error) {
             this.cleanup();
             throw error;
+        }
+    }
+
+    async setupBlobPlayback(response, onProgress, estimatedChunks) {
+        const blob = await response.blob();
+        this.audio = new Audio();
+        this.audioObjectUrl = URL.createObjectURL(blob);
+        this.audio.src = this.audioObjectUrl;
+        this.serverDownloadPath = this.audioObjectUrl;
+
+        this.audio.addEventListener('ended', () => {
+            this.dispatchEvent('ended');
+        });
+
+        onProgress?.(estimatedChunks, estimatedChunks);
+        this.dispatchEvent('complete');
+        this.dispatchEvent('downloadReady');
+
+        if (this.shouldAutoplay) {
+            setTimeout(() => this.play(), 100);
         }
     }
 
@@ -401,6 +436,11 @@ export class AudioService {
             this.audio = null;
         }
 
+        if (this.audioObjectUrl) {
+            URL.revokeObjectURL(this.audioObjectUrl);
+            this.audioObjectUrl = null;
+        }
+
         if (this.mediaSource && this.mediaSource.readyState === "open") {
             try {
                 this.mediaSource.endOfStream();
@@ -430,6 +470,11 @@ export class AudioService {
             this.audio.pause();
             this.audio.src = "";
             this.audio = null;
+        }
+
+        if (this.audioObjectUrl) {
+            URL.revokeObjectURL(this.audioObjectUrl);
+            this.audioObjectUrl = null;
         }
 
         if (this.mediaSource && this.mediaSource.readyState === "open") {
