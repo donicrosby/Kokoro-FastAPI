@@ -46,16 +46,102 @@ async def test_load_model_validation(kokoro_backend):
 
 @pytest.mark.asyncio
 async def test_load_model_success(kokoro_backend):
-    """Test model loading with mocked paths and Kokoro."""
+    """Test model loading with mocked paths and Kokoro (path-based when HF not set)."""
     mock_instance = MagicMock()
     mock_kokoro_class = MagicMock(return_value=mock_instance)
     with patch("api.src.inference.kokoro_v1.paths.get_onnx_model_path", new_callable=AsyncMock, return_value="/tmp/kokoro.onnx"):
         with patch("api.src.inference.kokoro_v1.paths.get_onnx_voices_path", new_callable=AsyncMock, return_value="/tmp/voices.bin"):
             with patch("api.src.inference.kokoro_v1.Kokoro", mock_kokoro_class):
-                await kokoro_backend.load_model("")
+                with patch("api.src.inference.kokoro_v1.settings") as mock_settings:
+                    mock_settings.hf_model_repo = None
+                    await kokoro_backend.load_model("")
     assert kokoro_backend.is_loaded
     assert kokoro_backend._model is mock_instance
     mock_kokoro_class.assert_called_once_with("/tmp/kokoro.onnx", "/tmp/voices.bin")
+
+
+@pytest.mark.asyncio
+async def test_load_model_uses_from_pretrained_when_hf_repo_set(kokoro_backend):
+    """When settings.hf_model_repo is set, load_model calls _load_from_pretrained and does not use paths."""
+    mock_instance = MagicMock()
+    with patch("api.src.inference.kokoro_v1.settings") as mock_settings:
+        mock_settings.hf_model_repo = "onnx-community/Kokoro-82M-v1.0-ONNX"
+        mock_settings.hf_model_filename = "onnx/model.onnx"
+        mock_settings.hf_voices_subdir = "voices"
+        mock_settings.hf_voices_filename = None
+        mock_settings.hf_revision = None
+        mock_settings.hf_cache_dir = None
+        with patch.object(kokoro_backend, "_load_from_pretrained", new_callable=AsyncMock) as mock_load_hf:
+            await kokoro_backend.load_model("")
+    mock_load_hf.assert_awaited_once()
+    assert kokoro_backend._model is None  # _load_from_pretrained was mocked, so model not set
+    # Paths should not have been called (no get_onnx_model_path / get_onnx_voices_path)
+
+
+@pytest.mark.asyncio
+async def test_load_from_pretrained_builds_kwargs_and_calls_from_pretrained(kokoro_backend):
+    """_load_from_pretrained builds correct kwargs and calls Kokoro.from_pretrained in executor."""
+    mock_model = MagicMock()
+    from_pretrained_called = []
+
+    def capture_from_pretrained(**kwargs):
+        from_pretrained_called.append(kwargs)
+        return mock_model
+
+    async def fake_run_in_executor(executor, fn):
+        return fn()
+
+    with patch("api.src.inference.kokoro_v1.settings") as mock_settings:
+        mock_settings.hf_model_repo = "onnx-community/Kokoro-82M-v1.0-ONNX"
+        mock_settings.hf_model_filename = "onnx/model.onnx"
+        mock_settings.hf_voices_subdir = "voices"
+        mock_settings.hf_voices_filename = None
+        mock_settings.hf_revision = "main"
+        mock_settings.hf_cache_dir = "/cache"
+        with patch("api.src.inference.kokoro_v1.Kokoro") as mock_kokoro_class:
+            mock_kokoro_class.from_pretrained = capture_from_pretrained
+            with patch("api.src.inference.kokoro_v1.asyncio.get_event_loop") as mock_loop:
+                mock_loop.return_value.run_in_executor = AsyncMock(side_effect=fake_run_in_executor)
+                await kokoro_backend._load_from_pretrained()
+    assert len(from_pretrained_called) == 1
+    kwargs = from_pretrained_called[0]
+    assert kwargs["repo_id"] == "onnx-community/Kokoro-82M-v1.0-ONNX"
+    assert kwargs["model_filename"] == "onnx/model.onnx"
+    assert kwargs["voices_subdir"] == "voices"
+    assert "voices_filename" not in kwargs
+    assert kwargs["revision"] == "main"
+    assert kwargs["cache_dir"] == "/cache"
+    assert kokoro_backend._model is mock_model
+
+
+@pytest.mark.asyncio
+async def test_load_from_pretrained_with_voices_filename(kokoro_backend):
+    """_load_from_pretrained passes voices_filename when subdir is not set."""
+    from_pretrained_called = []
+
+    def capture_from_pretrained(**kwargs):
+        from_pretrained_called.append(kwargs)
+        return MagicMock()
+
+    async def fake_run_in_executor(executor, fn):
+        return fn()
+
+    with patch("api.src.inference.kokoro_v1.settings") as mock_settings:
+        mock_settings.hf_model_repo = "user/repo"
+        mock_settings.hf_model_filename = "model.onnx"
+        mock_settings.hf_voices_subdir = None
+        mock_settings.hf_voices_filename = "data/voices.bin"
+        mock_settings.hf_revision = None
+        mock_settings.hf_cache_dir = None
+        with patch("api.src.inference.kokoro_v1.Kokoro") as mock_kokoro_class:
+            mock_kokoro_class.from_pretrained = capture_from_pretrained
+            with patch("api.src.inference.kokoro_v1.asyncio.get_event_loop") as mock_loop:
+                mock_loop.return_value.run_in_executor = AsyncMock(side_effect=fake_run_in_executor)
+                await kokoro_backend._load_from_pretrained()
+    assert len(from_pretrained_called) == 1
+    kwargs = from_pretrained_called[0]
+    assert kwargs["voices_filename"] == "data/voices.bin"
+    assert "voices_subdir" not in kwargs
 
 
 def test_unload(kokoro_backend):

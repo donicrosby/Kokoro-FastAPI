@@ -20,6 +20,7 @@ Provider options:
   OPENVINO_DISABLE_DYNAMIC_SHAPES -> disable_dynamic_shapes (true/false string)
 """
 
+import asyncio
 import json
 import os
 import tempfile
@@ -168,13 +169,20 @@ class KokoroV1(BaseModelBackend):
     async def load_model(self, path: str) -> None:
         """Load ONNX model and voices bundle.
 
+        When settings.hf_model_repo is set, loads via Kokoro.from_pretrained (HF Hub).
+        Otherwise uses local paths and optional ONNX_PROVIDER/from_session.
+
         Args:
-            path: Ignored; paths come from model_config.
+            path: Ignored; paths come from model_config or HF settings.
 
         Raises:
             RuntimeError: If model loading fails
         """
         try:
+            if settings.hf_model_repo and settings.hf_model_repo.strip():
+                await self._load_from_pretrained()
+                return
+
             onnx_path = await paths.get_onnx_model_path()
             voices_path = await paths.get_onnx_voices_path()
 
@@ -206,6 +214,33 @@ class KokoroV1(BaseModelBackend):
             raise e
         except Exception as e:
             raise RuntimeError(f"Failed to load Kokoro ONNX model: {e}") from e
+
+    async def _load_from_pretrained(self) -> None:
+        """Load model via Kokoro.from_pretrained (HF Hub). Runs in executor to avoid blocking."""
+        repo_id = settings.hf_model_repo.strip()
+        model_filename = settings.hf_model_filename
+        revision = settings.hf_revision
+        cache_dir = settings.hf_cache_dir
+
+        kwargs: dict = {
+            "repo_id": repo_id,
+            "model_filename": model_filename,
+            "revision": revision,
+            "cache_dir": cache_dir,
+        }
+        if settings.hf_voices_subdir and settings.hf_voices_subdir.strip():
+            kwargs["voices_subdir"] = settings.hf_voices_subdir.strip()
+        else:
+            kwargs["voices_filename"] = (settings.hf_voices_filename or "").strip()
+
+        logger.info("Loading Kokoro ONNX model from Hugging Face Hub: %s", repo_id)
+
+        loop = asyncio.get_event_loop()
+        self._model = await loop.run_in_executor(
+            None,
+            lambda: Kokoro.from_pretrained(**kwargs),
+        )
+        logger.info("Loaded Kokoro model from %s", repo_id)
 
     def _resolve_voice_spec(
         self,

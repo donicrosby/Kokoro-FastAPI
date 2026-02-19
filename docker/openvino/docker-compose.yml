@@ -19,8 +19,11 @@ services:
     environment:
       # ONNX Optimization Settings for vectorized operations
       - ONNX_PROVIDER=OpenVINOExecutionProvider
-      # OpenVINO device: CPU (default for compatibility) or GPU / GPU.0
+      # OpenVINO device: CPU (default for compatibility) or GPU / GPU.0 (used for path-based model load)
       - OPENVINO_DEVICE_TYPE=GPU
+      # When using HF community models (HF_MODEL_REPO), the loader uses Kokoro.from_pretrained();
+      # the fork only reads ONNX_PROVIDER_CONFIG for provider options, so set this for OpenVINO GPU:
+      - 'ONNX_PROVIDER_CONFIG={"providers": ["OpenVINOExecutionProvider"], "provider_options": [{"device_type": "GPU"}]}'
       - ONNX_NUM_THREADS=8  # Maximize core usage for vectorized ops
       - ONNX_INTER_OP_THREADS=4  # Higher inter-op for parallel matrix operations
       - ONNX_EXECUTION_MODE=parallel

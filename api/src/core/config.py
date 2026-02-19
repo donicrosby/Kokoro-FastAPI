@@ -1,4 +1,5 @@
 import torch
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -28,6 +29,14 @@ class Settings(BaseSettings):
     # Container absolute paths
     model_dir: str = "/app/api/src/models"  # Absolute path in container
     voices_dir: str = "/app/api/src/voices/v1_0"  # Absolute path in container
+
+    # Hugging Face Hub (for Kokoro.from_pretrained); when set, load_model uses from_pretrained instead of local paths
+    hf_model_repo: str | None = None  # e.g. "onnx-community/Kokoro-82M-v1.0-ONNX"
+    hf_model_filename: str = "onnx/model.onnx"  # path in repo
+    hf_voices_subdir: str | None = None  # e.g. "voices" (folder of .bin files); exactly one of hf_voices_*
+    hf_voices_filename: str | None = None  # single voices file in repo; exactly one of hf_voices_*
+    hf_revision: str | None = None  # branch, tag, or commit
+    hf_cache_dir: str | None = None  # override HF_HUB_CACHE
 
     # Audio Settings
     sample_rate: int = 24000
@@ -66,6 +75,17 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    @model_validator(mode="after")
+    def check_hf_voices_config(self) -> "Settings":
+        if self.hf_model_repo and self.hf_model_repo.strip():
+            has_subdir = bool(self.hf_voices_subdir and self.hf_voices_subdir.strip())
+            has_filename = bool(self.hf_voices_filename and self.hf_voices_filename.strip())
+            if has_subdir == has_filename:
+                raise ValueError(
+                    "When HF_MODEL_REPO is set, set exactly one of HF_VOICES_SUBDIR or HF_VOICES_FILENAME"
+                )
+        return self
 
     def get_device(self) -> str:
         """Get the appropriate device based on settings and availability"""
