@@ -243,7 +243,7 @@ async def create_speech(
                     try:
                         # Write chunks to temp file and stream
                         async for chunk_data in generator:
-                            if chunk_data.output:  # Skip empty chunks
+                            if AudioService.has_data(chunk_data.output):  # Skip empty chunks
                                 await temp_writer.write(chunk_data.output)
                                 # if return_json:
                                 #    yield chunk, chunk_data
@@ -271,7 +271,7 @@ async def create_speech(
                 try:
                     # Stream chunks
                     async for chunk_data in generator:
-                        if chunk_data.output:  # Skip empty chunks
+                        if AudioService.has_data(chunk_data.output):  # Skip empty chunks
                             yield chunk_data.output
                 except Exception as e:
                     logger.error(f"Error in single output streaming: {e}")

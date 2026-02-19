@@ -207,7 +207,7 @@ async def create_captioned_speech(
                             # The timestamp acumulator is only used when word level time stamps are generated but no audio is returned.
                             timestamp_acumulator = []
 
-                            if chunk_data.output:  # Skip empty chunks
+                            if AudioService.has_data(chunk_data.output):  # Skip empty chunks
                                 await temp_writer.write(chunk_data.output)
                                 base64_chunk = base64.b64encode(
                                     chunk_data.output
@@ -258,7 +258,7 @@ async def create_captioned_speech(
 
                     # Stream chunks
                     async for chunk_data in generator:
-                        if chunk_data.output:  # Skip empty chunks
+                        if AudioService.has_data(chunk_data.output):  # Skip empty chunks
                             # Encode the chunk bytes into base 64
                             base64_chunk = base64.b64encode(chunk_data.output).decode(
                                 "utf-8"

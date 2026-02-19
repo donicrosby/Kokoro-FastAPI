@@ -95,7 +95,7 @@ def _provider_options_from_env(provider_name: str) -> dict[str, str]:
             obj = json.loads(raw)
             return {k: str(v) for k, v in obj.items()}
         except (json.JSONDecodeError, TypeError) as e:
-            logger.warning("Invalid ONNX_PROVIDER_OPTIONS JSON, falling back to provider-specific env: %s", e)
+            logger.warning(f"Invalid ONNX_PROVIDER_OPTIONS JSON, falling back to provider-specific env: {e}")
     if provider_name == "OpenVINOExecutionProvider":
         out: dict[str, str] = {}
         for env_key, opt_key in (

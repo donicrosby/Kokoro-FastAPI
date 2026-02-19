@@ -136,6 +136,23 @@ class AudioService:
     }
 
     @staticmethod
+    def has_data(payload) -> bool:
+        """Safely determine whether an audio payload has content.
+
+        Avoids ambiguous truth-value evaluation for numpy arrays.
+        """
+        if payload is None:
+            return False
+
+        if isinstance(payload, np.ndarray):
+            return payload.size > 0
+
+        if hasattr(payload, "__len__"):
+            return len(payload) > 0
+
+        return True
+
+    @staticmethod
     async def convert_audio(
         audio_chunk: AudioChunk,
         output_format: str,
@@ -178,6 +195,7 @@ class AudioService:
                     audio_chunk, chunk_text, speed, is_last_chunk, normalizer
                 )
 
+            chunk_data = b""
             # Write audio data first
             if len(audio_chunk.audio) > 0:
                 chunk_data = writer.write_chunk(audio_chunk.audio)
@@ -186,11 +204,11 @@ class AudioService:
             if is_last_chunk:
                 final_data = writer.write_chunk(finalize=True)
 
-                if final_data:
+                if AudioService.has_data(final_data):
                     audio_chunk.output = final_data
                 return audio_chunk
 
-            if chunk_data:
+            if AudioService.has_data(chunk_data):
                 audio_chunk.output = chunk_data
             return audio_chunk
 

@@ -321,7 +321,7 @@ class TTSService:
                                 is_last_chunk=False, trim_audio=False, normalizer=stream_normalizer,
 
                             )
-                            if formatted_pause_chunk.output:
+                            if AudioService.has_data(formatted_pause_chunk.output):
                                 yield formatted_pause_chunk
                         else:  # Raw audio mode
                             # For raw audio mode, silence is already in the correct format (int16)
