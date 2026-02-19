@@ -19,6 +19,8 @@ services:
     environment:
       # ONNX Optimization Settings for vectorized operations
       - ONNX_PROVIDER=OpenVINOExecutionProvider
+      # OpenVINO device: CPU (default for compatibility) or GPU / GPU.0
+      - OPENVINO_DEVICE_TYPE=GPU
       - ONNX_NUM_THREADS=8  # Maximize core usage for vectorized ops
       - ONNX_INTER_OP_THREADS=4  # Higher inter-op for parallel matrix operations
       - ONNX_EXECUTION_MODE=parallel
