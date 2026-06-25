@@ -97,6 +97,9 @@ jobs:
           - build_target: "rocm"
             platform: "linux/amd64"
             runs_on: "ubuntu-24.04"
+          - build_target: "rocm-gfx1151"
+            platform: "linux/amd64"
+            runs_on: "ubuntu-24.04"
     runs-on: ${{ matrix.runs_on }}
     steps:
       - name: Checkout repository
@@ -159,7 +162,7 @@ jobs:
       REPO: ${{ vars.REPO || 'kokoro-fastapi' }}
     strategy:
       matrix:
-        build_target: ["cpu", "gpu", "gpu-cu128", "rocm"]
+        build_target: ["cpu", "gpu", "gpu-cu128", "rocm", "rocm-gfx1151"]
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -222,6 +225,14 @@ jobs:
               SOURCES=("${REGISTRY}/${OWNER}/${PACKAGE}:${VERSION_TAG}-amd64")
               TITLE="Kokoro-FastAPI (ROCm)"
               DESCRIPTION="Kokoro TTS served via FastAPI. AMD ROCm build. amd64 only."
+              ;;
+            rocm-gfx1151)
+              PACKAGE="${REPO}-rocm-gfx1151"
+              MANIFEST_TAGS="${VERSION_TAG}"
+              LATEST_TAGS="latest"
+              SOURCES=("${REGISTRY}/${OWNER}/${PACKAGE}:${VERSION_TAG}-amd64")
+              TITLE="Kokoro-FastAPI (ROCm gfx1151)"
+              DESCRIPTION="Kokoro TTS served via FastAPI. AMD ROCm 7.2.4 build for Strix Halo / gfx1151. amd64 only."
               ;;
             *)
               PACKAGE="${REPO}-${TARGET}"

@@ -46,13 +46,15 @@ Pre-built multi-arch images with models baked in.
 | NVIDIA GTX 9xx, 10xx, 20xx, 30xx, 40xx (x86_64) | `kokoro-fastapi-gpu:latest-cu126` or `kokoro-fastapi-gpu:latest` |
 | NVIDIA RTX 50-series / Blackwell (x86_64) | `kokoro-fastapi-gpu:latest-cu128` |
 | NVIDIA on arm64 (Jetson, GH200) | `kokoro-fastapi-gpu:latest` (ships cu129, no cu126 arm64 wheels upstream) |
-| AMD GPU | `kokoro-fastapi-rocm:latest` (experimental, x86_64 only) |
+| AMD GPU (gfx1030 and older) | `kokoro-fastapi-rocm:latest` (experimental, x86_64 only, ROCm 6.4) |
+| AMD Strix Halo (gfx1151) | `kokoro-fastapi-rocm-gfx1151:latest` (experimental, x86_64 only, ROCm 7.2) |
 
 ```bash
 docker run -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest                                       # CPU
 docker run --gpus all -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-gpu:latest                            # NVIDIA (x86_64 or arm64)
 docker run --gpus all -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-gpu:latest-cu128                      # NVIDIA Blackwell / RTX 50-series
-docker run --device=/dev/kfd --device=/dev/dri -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-rocm:latest  # AMD
+docker run --device=/dev/kfd --device=/dev/dri -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-rocm:latest  # AMD (gfx1030 and older)
+docker run --device=/dev/kfd --device=/dev/dri -p 8880:8880 ghcr.io/donicrosby/kokoro-fastapi-rocm-gfx1151:latest  # AMD Strix Halo (gfx1151)
 ```
 
 Configuration via environment variables, see `core/config.py`. The `:latest` and `:latest-cu126` tags resolve to the same multi-arch image.
@@ -72,7 +74,8 @@ Configuration via environment variables, see `core/config.py`. The `:latest` and
 
         cd docker/gpu   # For NVIDIA GPU support
         # or cd docker/cpu   # For CPU support
-        # or cd docker/rocm  # For AMD GPU (ROCm, experimental, amd64 only)
+        # or cd docker/rocm  # For AMD GPU (gfx1030 and older, ROCm 6.4)
+        # or cd docker/rocm-gfx1151  # For AMD Strix Halo (gfx1151, ROCm 7.2)
         docker compose up --build
 
         # *Note for Apple Silicon (M1/M2/M3) users:

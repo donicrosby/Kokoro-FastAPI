@@ -5,6 +5,9 @@ Notable changes to this project will be documented in this file.
 Per-PR attribution and contributor credits are published automatically on the corresponding GitHub release page; this file is the curated, human-readable summary.
 
 ## [v0.6.0] - Unreleased
+### Added
+- New `kokoro-fastapi-rocm-gfx1151` image for AMD Strix Halo (gfx1151 / RDNA 3.5) using ROCm 7.2.4 and AMD's own PyTorch wheels. This is a separate image from the existing ROCm 6.4.4 build to avoid dropping support for older AMD architectures. (#454)
+
 ### Fixed
 - OpenAI voice aliases pointed at legacy v0.19 voicepacks that sound degraded on the v1.0 model. Added the proper v1.0 `bf_isabella` and repointed `nova` (`bf_v0isabella` -> `bf_isabella`), `alloy`, `ash`, `coral`, `echo` to their v1.0 voices. The `v0*` voices stay available by explicit name. (#479)
 

@@ -1,0 +1,54 @@
+name: kokoro-fastapi-rocm-gfx1151
+services:
+  kokoro-tts:
+      # image: ghcr.io/donicrosby/kokoro-fastapi-rocm-gfx1151:v${VERSION}
+      build:
+        context: ../..
+        dockerfile: docker/rocm-gfx1151/Dockerfile
+      devices:
+        - /dev/dri
+        - /dev/kfd
+      group_add:
+      # NOTE: These groups are the group ids for: video, input, and render
+      # Numbers can be found via running: getent group $GROUP_NAME | cut -d: -f3
+        - 44
+        - 993
+        - 996
+      restart: 'always'
+      # ipc: host is required for PyTorch shared memory access on ROCm.
+      # Without it, the default Docker IPC namespace limits /dev/shm and can
+      # cause shared memory crashes during inference.
+      ipc: host
+      # Named volumes persist the MIOpen find DB and kernel cache at the paths
+      # MIOpen actually writes to ($HOME/.config/miopen and $HOME/.cache/miopen
+      # for appuser). Defined at the bottom of this file. Survives
+      # `docker compose down`; `docker compose down -v` clears them. Inspect
+      # contents with `docker volume inspect kokoro-fastapi-rocm-gfx1151_miopen_cache`.
+      volumes:
+        - miopen_config:/home/appuser/.config/miopen
+        - miopen_cache:/home/appuser/.cache/miopen
+      ports:
+        - 8880:8880
+      environment: {}
+        # HSA_OVERRIDE_GFX_VERSION is baked into the Dockerfile as 11.5.1.
+        # Override here only if targeting a different gfx architecture.
+        # Example:
+        #   HSA_OVERRIDE_GFX_VERSION: "11.5.1"
+        #
+        # MIOPEN_FIND_MODE=2 is set by default in the Dockerfile. It reuses the
+        # on-disk find DB and skips the expensive per-process kernel search.
+        # The named volumes above persist that cache across runs.
+        # See: https://github.com/ROCm/MIOpen/blob/develop/docs/conceptual/tuningdb.rst
+        #
+        # To pre-populate the cache for best-case latency on Strix Halo:
+        # 1. Override the env to force an exhaustive search:
+        #      MIOPEN_FIND_MODE: "3"
+        #      MIOPEN_FIND_ENFORCE: "3"
+        # 2. Run docker/rocm/warmup_miopen.py inside the container, or generate
+        #    audio for varied input lengths (e.g. a few paragraphs of Dracula).
+        #    This takes ~2 hours on Strix Halo but only needs to run once.
+        # 3. Remove the overrides. The default (FIND_MODE=2) will reuse the cache.
+
+volumes:
+  miopen_config:
+  miopen_cache:
