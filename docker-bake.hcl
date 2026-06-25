@@ -115,6 +115,20 @@ target "_rocm_base" {
     ]
 }
 
+# Base settings for AMD ROCm gfx1151 (Strix Halo) builds
+target "_rocm_gfx1151_base" {
+    inherits = ["_common"]
+    dockerfile = "docker/rocm-gfx1151/Dockerfile"
+    labels = {
+        "org.opencontainers.image.title"       = "Kokoro-FastAPI (ROCm gfx1151)"
+        "org.opencontainers.image.description" = "Kokoro TTS served via FastAPI. AMD ROCm 7.2.4 build for Strix Halo / gfx1151 (amd64 only)."
+    }
+    annotations = [
+        "org.opencontainers.image.title=Kokoro-FastAPI (ROCm gfx1151)",
+        "org.opencontainers.image.description=Kokoro TTS served via FastAPI. AMD ROCm 7.2.4 build for Strix Halo / gfx1151 (amd64 only).",
+    ]
+}
+
 
 # Individual platform targets for debugging/testing
 target "cpu-amd64" {
@@ -183,6 +197,15 @@ target "rocm-amd64" {
     ]
 }
 
+# AMD ROCm gfx1151 (Strix Halo) only supports x86
+target "rocm-gfx1151-amd64" {
+    inherits = ["_rocm_gfx1151_base"]
+    platforms = ["linux/amd64"]
+    tags = [
+        "${REGISTRY}/${OWNER}/${REPO}-rocm-gfx1151:${VERSION}-amd64"
+    ]
+}
+
 # Development targets for faster local builds
 target "cpu-dev" {
     inherits = ["_cpu_base"]
@@ -206,6 +229,12 @@ target "gpu-cu128-dev" {
     tags = ["${REGISTRY}/${OWNER}/${REPO}-gpu:dev-cu128"]
 }
 
+target "rocm-gfx1151-dev" {
+    inherits = ["_rocm_gfx1151_base"]
+    # No multi-platform for dev builds
+    tags = ["${REGISTRY}/${OWNER}/${REPO}-rocm-gfx1151:dev"]
+}
+
 group "dev" {
     targets = ["cpu-dev", "gpu-dev"]
 }
@@ -220,13 +249,13 @@ group "gpu-all" {
 }
 
 group "rocm-all" {
-    targets = ["rocm-amd64"]
+    targets = ["rocm-amd64", "rocm-gfx1151-amd64"]
 }
 
 group "all" {
-    targets = ["cpu", "gpu-amd64", "gpu-arm64", "gpu-cu128-amd64", "rocm-amd64"]
+    targets = ["cpu", "gpu-amd64", "gpu-arm64", "gpu-cu128-amd64", "rocm-amd64", "rocm-gfx1151-amd64"]
 }
 
 group "individual-platforms" {
-    targets = ["cpu-amd64", "cpu-arm64", "gpu-amd64", "gpu-arm64", "gpu-cu128-amd64", "rocm-amd64"]
+    targets = ["cpu-amd64", "cpu-arm64", "gpu-amd64", "gpu-arm64", "gpu-cu128-amd64", "rocm-amd64", "rocm-gfx1151-amd64"]
 }
